@@ -71,7 +71,10 @@ function App() {
   useEffect(() => {
     if (!supabase) return;
     supabase.auth.getSession().then(({data})=>setSession(data.session));
-    const {data:{subscription}} = supabase.auth.onAuthStateChange((_event,next)=>setSession(next));
+    const {data:{subscription}} = supabase.auth.onAuthStateChange((event,next)=>{
+      setSession(next);
+      if(event==="PASSWORD_RECOVERY"){setAuthMode("new-password");setAuthOpen(true);}
+    });
     return ()=>subscription.unsubscribe();
   },[]);
 
@@ -147,6 +150,18 @@ function App() {
     finally{setBusy(false);}
   };
 
+  const resendAuthCode=async()=>{
+    if(!supabase)return;
+    setBusy(true);
+    try{
+      const result=authMode==="verify-signup"
+        ? await supabase.auth.resend({type:"signup",email:authEmail})
+        : await supabase.auth.resetPasswordForEmail(authEmail,{redirectTo:window.location.origin});
+      if(result.error)throw result.error;
+      notify("درخواست ارسال دوباره ثبت شد؛ ایمیل را بررسی کن.");
+    }catch(error){notify(errText(error));}
+    finally{setBusy(false);}
+  };
   const logout=async()=>{await supabase?.auth.signOut();setAuthOpen(false);setPage("home");notify("از حساب خارج شدی.");};
   const refreshDns=async()=>{
     if(!supabase)return;
@@ -250,7 +265,7 @@ function App() {
       </div>
       <footer className="footer"><span>© ۲۰۲۶ MIXO GAME</span><span>ساخته‌شده برای گیمرها و کنجکاوهای شبکه <i>✦</i></span><span>نسخه ۰.۱.۰ · پیش‌نمایش توسعه</span></footer>
     </main>
-    {authOpen&&<AuthModal mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={displayName} setName={setDisplayName} username={username} setUsername={setUsername} otp={otp} setOtp={setOtp} newPassword={newPassword} setNewPassword={setNewPassword} showPass={showPass} setShowPass={setShowPass} busy={busy} submit={handleAuth} close={()=>setAuthOpen(false)} notice={notice}/>}
+    {authOpen&&<AuthModal mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={displayName} setName={setDisplayName} username={username} setUsername={setUsername} otp={otp} setOtp={setOtp} newPassword={newPassword} setNewPassword={setNewPassword} showPass={showPass} setShowPass={setShowPass} busy={busy} submit={handleAuth} resend={resendAuthCode} close={()=>setAuthOpen(false)} notice={notice}/>}
     {notice&&<div className="toast"><Check size={16}/>{notice}</div>}
   </div>;
 }
@@ -333,7 +348,7 @@ function AccountPage({session,profile,network,desktop,logout,startAuth}:any){
     <div className="hint-line"><ShieldCheck size={15}/> کلید عمومی Supabase داخل برنامه استفاده می‌شود. کلیدهای مدیریتی و کلید ارسال ایمیل نباید در مخزن یا فایل اجرایی قرار بگیرند.</div>
   </>;
 }
-function AuthModal({mode,setMode,email,setEmail,password,setPassword,name,setName,username,setUsername,otp,setOtp,newPassword,setNewPassword,showPass,setShowPass,busy,submit,close,notice}:any){
+function AuthModal({mode,setMode,email,setEmail,password,setPassword,name,setName,username,setUsername,otp,setOtp,newPassword,setNewPassword,showPass,setShowPass,busy,submit,resend,close,notice}:any){
   const verify=mode==="verify-signup"||mode==="verify-recovery";
   const title=mode==="signup"?"ساخت حساب جدید":mode==="forgot"?"بازیابی رمز عبور":mode==="verify-signup"?"تأیید ایمیل":mode==="verify-recovery"?"تأیید بازیابی":mode==="new-password"?"رمز جدید":"ورود به MIXO";
   return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close();}}><div className="auth-modal"><button className="modal-close" onClick={close}>×</button><div className="auth-brand"><div className="brand-mark"><span>M</span><i/></div><div><b>MIXO<span>_</span>GAME</b><small>IDENTITY SYSTEM</small></div></div><div className="auth-eyebrow"><LockKeyhole size={13}/> حساب یکپارچه</div><h2>{title}</h2><p>{mode==="signup"?"یک شناسه بساز تا پیشرفت بازی و تنظیماتت بین وب و ویندوز همراهت باشد.":verify?"کد یک‌بارمصرف ارسال‌شده به ایمیلت را وارد کن.":mode==="new-password"?"رمز تازه و امنی برای حساب خودت انتخاب کن.":mode==="forgot"?"ایمیلت را وارد کن تا راه بازیابی رمز برایت فرستاده شود.":"برای همگام‌سازی اطلاعاتت وارد حساب شو."}</p>
@@ -345,7 +360,7 @@ function AuthModal({mode,setMode,email,setEmail,password,setPassword,name,setNam
       {mode==="new-password"&&<label>رمز عبور تازه<input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} minLength={8} placeholder="حداقل ۸ نویسه" required/></label>}
       <button className="btn btn-primary auth-submit" type="submit" disabled={busy}>{busy?<RefreshCw className="spin" size={16}/>:<ArrowLeft size={16}/>} {busy?"در حال انجام...":mode==="signup"?"ساخت حساب":mode==="login"?"ورود":mode==="forgot"?"ارسال کد بازیابی":verify?"تأیید کد": "ذخیره رمز تازه"}</button>
     </form>
-    <div className="auth-links">{mode==="login"&&<><button onClick={()=>setMode("forgot")}>رمز عبور را فراموش کرده‌ام</button><span>حساب نداری؟ <button onClick={()=>setMode("signup")}>ثبت‌نام</button></span></>}{mode==="signup"&&<span>از قبل حساب داری؟ <button onClick={()=>setMode("login")}>ورود</button></span>}{mode==="forgot"&&<button onClick={()=>setMode("login")}>بازگشت به ورود</button>}{verify&&<button onClick={()=>setMode(mode==="verify-signup"?"signup":"forgot")}>ارسال دوباره کد</button>}{mode==="new-password"&&<button onClick={()=>setMode("login")}>بازگشت به ورود</button>}</div>
+    <div className="auth-links">{mode==="login"&&<><button onClick={()=>setMode("forgot")}>رمز عبور را فراموش کرده‌ام</button><span>حساب نداری؟ <button onClick={()=>setMode("signup")}>ثبت‌نام</button></span></>}{mode==="signup"&&<span>از قبل حساب داری؟ <button onClick={()=>setMode("login")}>ورود</button></span>}{mode==="forgot"&&<button onClick={()=>setMode("login")}>بازگشت به ورود</button>}{verify&&<button onClick={resend} disabled={busy}>ارسال دوباره کد</button>}{mode==="new-password"&&<button onClick={()=>setMode("login")}>بازگشت به ورود</button>}</div>
     {notice&&<div className="auth-note">{notice}</div>}
     <div className="auth-security"><ShieldCheck size={14}/> رمزها در Supabase Auth نگهداری می‌شوند؛ برنامه به رمز خام دسترسی ذخیره‌ای ندارد.</div>
   </div></div>;

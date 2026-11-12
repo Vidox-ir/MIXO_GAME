@@ -22,9 +22,7 @@ jobs:
       - run: npm install
       - run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          BASE_PATH: /MIXO_GAME/
+          VITE_BASE_PATH: /MIXO_GAME/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
