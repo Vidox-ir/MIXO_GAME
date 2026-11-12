@@ -185,7 +185,7 @@ export async function testCustomResolver(server: {id:string;name:string;ipv4:str
 
 export function isValidIp(value: string) {
   const v = value.trim();
-  const ipv4 = /^(?:(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)\\.){3}(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)$/;
+  const ipv4 = /^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)$/;
   if (ipv4.test(v)) return true;
   if (!v.includes(":") || !/^[0-9a-f:]+$/i.test(v) || v.includes(":::")) return false;
   const sides = v.split("::");
