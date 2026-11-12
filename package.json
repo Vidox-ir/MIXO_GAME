@@ -1,0 +1,63 @@
+{
+  "name": "mixo-game",
+  "private": true,
+  "version": "0.1.0",
+  "description": "MIXO GAME — Persian gaming launcher and network command center",
+  "main": "electron/main.cjs",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "web": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "desktop": "electron .",
+    "dist:win": "node scripts/generate-icon.cjs && npm run build && electron-builder --win nsis --publish never",
+    "dist:portable": "node scripts/generate-icon.cjs && npm run build && electron-builder --win portable --publish never --config.directories.output=release-portable",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.119.0",
+    "lucide-react": "0.468.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.0",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.1",
+    "concurrently": "9.2.1",
+    "electron": "45.2.2",
+    "electron-builder": "26.0.12",
+    "typescript": "5.9.3",
+    "vite": "8.3.8",
+    "wait-on": "8.0.3"
+  },
+  "build": {
+    "appId": "ir.vidox.mixo",
+    "productName": "MIXO GAME",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "MIXO-GAME-${version}-${arch}.${ext}",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
