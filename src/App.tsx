@@ -137,14 +137,14 @@ function App() {
     try{
       if(authMode==="signup"){
         if(authPassword.length<8)throw new Error("رمز عبور باید دست‌کم ۸ نویسه داشته باشد.");
-        const {error}=await supabase.auth.signUp({email:authEmail,password:authPassword,options:{data:{display_name:displayName,username},emailRedirectTo:window.location.origin}});
+        const {error}=await supabase.auth.signUp({email:authEmail,password:authPassword,options:{data:{display_name:displayName,username}}});
         if(error)throw error;
         setAuthMode("verify-signup");notify("حساب ساخته شد؛ کد تأیید ارسال شد. پوشه هرزنامه را هم بررسی کن.");
       }else if(authMode==="login"){
         const {error}=await supabase.auth.signInWithPassword({email:authEmail,password:authPassword});if(error)throw error;
         setAuthOpen(false);notify("خوش برگشتی!");
       }else if(authMode==="forgot"){
-        const {error}=await supabase.auth.resetPasswordForEmail(authEmail,{redirectTo:window.location.origin});if(error)throw error;
+        const {error}=await supabase.auth.resetPasswordForEmail(authEmail);if(error)throw error;
         setAuthMode("verify-recovery");notify("درخواست بازیابی ارسال شد؛ کد یا لینک ایمیل را بررسی کن.");
       }else if(authMode==="verify-signup"||authMode==="verify-recovery"){
         const type=authMode==="verify-signup"?"signup":"recovery";
@@ -164,7 +164,7 @@ function App() {
     try{
       const result=authMode==="verify-signup"
         ? await supabase.auth.resend({type:"signup",email:authEmail})
-        : await supabase.auth.resetPasswordForEmail(authEmail,{redirectTo:window.location.origin});
+        : await supabase.auth.resetPasswordForEmail(authEmail);
       if(result.error)throw result.error;
       notify("درخواست ارسال دوباره ثبت شد؛ ایمیل را بررسی کن.");
     }catch(error){notify(errText(error));}
