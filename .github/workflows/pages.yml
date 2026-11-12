@@ -23,7 +23,8 @@ jobs:
       - name: Enable GitHub Pages
         uses: actions/configure-pages@v5
         with:
-          enablement: true
+          # GitHub Pages must be enabled once in repository Settings > Pages.
+          # The workflow token cannot create the Pages site for this repository.
       - name: Install dependencies
         run: npm install
       - name: Build web app
