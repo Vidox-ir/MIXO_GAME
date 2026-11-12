@@ -50,7 +50,8 @@
         "nsis",
         "portable"
       ],
-      "artifactName": "MIXO-GAME-${version}-${arch}.${ext}"
+      "artifactName": "MIXO-GAME-${version}-${arch}.${ext}",
+      "icon": "assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,
