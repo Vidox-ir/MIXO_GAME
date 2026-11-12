@@ -56,6 +56,7 @@ function App() {
   const [customIp,setCustomIp] = useState("");
   const [customDoh,setCustomDoh] = useState("");
   const [ping,setPing] = useState<any>(null);
+  const [pingHistory,setPingHistory] = useState<any[]>([]);
   const [network,setNetwork] = useState<any>(null);
   const [games,setGames] = useState<any[]>([]);
   const [missions,setMissions] = useState<any[]>([]);
@@ -107,6 +108,13 @@ function App() {
     window.desktopAPI.networkInfo().then(setNetwork).catch(()=>{});
     window.desktopAPI.pingHost("1.1.1.1").then(setPing).catch(()=>{});
   },[]);
+
+  useEffect(() => {
+    if(!session?.user||!supabase)return;
+    supabase.from("network_test_runs").select("*").eq("user_id",session.user.id)
+      .order("tested_at",{ascending:false}).limit(30)
+      .then(({data})=>setPingHistory(data||[]));
+  },[session?.user?.id]);
 
   const avgLatency = useMemo(()=>{
     const valid=dnsResults.filter(r=>r.ok&&r.ms!==null);
@@ -194,8 +202,21 @@ function App() {
   };
   const pingTest=async()=>{
     if(!window.desktopAPI){notify("تست Ping دقیق به برنامه ویندوز نیاز دارد.");return;}
-    setSaving(true);const [p,info]=await Promise.all([window.desktopAPI.pingHost("1.1.1.1"),window.desktopAPI.networkInfo()]);
-    setPing(p);setNetwork(info);setSaving(false);
+    setSaving(true);
+    try{
+      const [p,info]=await Promise.all([window.desktopAPI.pingHost("1.1.1.1"),window.desktopAPI.networkInfo()]);
+      setPing(p);setNetwork(info);
+      if(session?.user&&supabase){
+        const {data,error}=await supabase.from("network_test_runs").insert({
+          user_id:session.user.id,target_host:"1.1.1.1",avg_ms:p.avgMs,min_ms:p.minMs,
+          max_ms:p.maxMs,packet_loss:p.loss,success:p.ok,raw_output:p.raw||""
+        }).select().single();
+        if(error)notify("Ping انجام شد؛ ذخیره تاریخچه ناموفق بود: "+error.message);
+        else setPingHistory(old=>[data,...old].slice(0,30));
+      }
+      notify(p.ok?"آزمایش Ping با موفقیت انجام شد.":"مقصد در دسترس نبود؛ نتیجه در تاریخچه ثبت شد.");
+    }catch(error){notify(errText(error));}
+    finally{setSaving(false);}
   };
   const pickGame=async(seed?:any)=>{
     if(!session?.user||!supabase){requireAuth("games");return;}
@@ -258,7 +279,7 @@ function App() {
       <div className="content">
         {page==="home"&&<HomePage session={session} profile={profile} desktop={desktop} ping={ping} avgLatency={avgLatency} go={setPage} requireAuth={requireAuth} games={games} dnsCount={dnsRows.length} worldPlayer={worldPlayer}/>}
         {page==="games"&&<GamesPage games={games} desktop={desktop} add={pickGame} launch={launchGame} notify={notify}/>}
-        {page==="dns"&&<DNSPage rows={visibleDns} allRows={dnsRows} custom={customDns} results={dnsResults} busy={dnsBusy} search={dnsSearch} setSearch={setDnsSearch} filter={dnsFilter} setFilter={setDnsFilter} domain={dnsDomain} setDomain={setDnsDomain} run={runDns} add={addCustomDns} customName={customName} setCustomName={setCustomName} customIp={customIp} setCustomIp={setCustomIp} customDoh={customDoh} setCustomDoh={setCustomDoh} desktop={desktop} refresh={refreshDns}/>}
+        {page==="dns"&&<DNSPage rows={visibleDns} allRows={dnsRows} custom={customDns} results={dnsResults} busy={dnsBusy} search={dnsSearch} setSearch={setDnsSearch} filter={dnsFilter} setFilter={setDnsFilter} domain={dnsDomain} setDomain={setDnsDomain} run={runDns} add={addCustomDns} customName={customName} setCustomName={setCustomName} customIp={customIp} setCustomIp={setCustomIp} customDoh={customDoh} setCustomDoh={setCustomDoh} desktop={desktop} refresh={refreshDns} ping={ping} pingHistory={pingHistory} pingTest={pingTest} pingBusy={saving}/>}
         {page==="ghost"&&<GhostPage session={session} missions={missions} progress={ghostProgress} active={activeMission} setActive={setActiveMission} answer={answer} setAnswer={setAnswer} submit={answerMission} saving={saving} requireAuth={()=>requireAuth("ghost")}/>}
         {page==="world"&&<WorldPage session={session} player={worldPlayer} locations={worldLocations} claims={worldClaims} claim={claimLocation} saving={saving} requireAuth={()=>requireAuth("world")}/>}
         {page==="account"&&<AccountPage session={session} profile={profile} network={network} desktop={desktop} logout={logout} startAuth={startAuth}/>}
@@ -304,11 +325,12 @@ function GamesPage({games,desktop,add,launch,notify}:any){
     </div><div className="hint-line"><CircleHelp size={15}/> نسخه وب می‌تواند کتابخانه را مدیریت کند؛ انتخاب فایل EXE و اجرای بازی فقط در برنامه ویندوز فعال است.</div>
   </>;
 }
-function DNSPage({rows,allRows,custom,results,busy,search,setSearch,filter,setFilter,domain,setDomain,run,add,customName,setCustomName,customIp,setCustomIp,customDoh,setCustomDoh,desktop,refresh}:any){
+function DNSPage({rows,allRows,custom,results,busy,search,setSearch,filter,setFilter,domain,setDomain,run,add,customName,setCustomName,customIp,setCustomIp,customDoh,setCustomDoh,desktop,refresh,ping,pingHistory,pingTest,pingBusy}:any){
   const [showAdd,setShowAdd]=useState(false);
   const categories: string[] = ["همه", ...Array.from(new Set<string>((allRows as DNSRecord[]).map((r:DNSRecord)=>r.category)))];
   const resultById=new Map(results.map((r:DNSResult)=>[r.id,r]));
   return <><PageHeading eyebrow="NETSCOPE / RESOLVER LAB" title="آزمایشگاه DNS" desc="سرویس‌ها را از مسیر واقعی اتصال خودت آزمایش کن؛ نتیجه به اپراتور، موقعیت و مسیر شبکه وابسته است." action={<button className="btn btn-ghost" onClick={()=>setShowAdd(v=>!v)}><Plus size={16}/> DNS اختصاصی</button>}/>
+    <div className="ping-panel panel"><div className="panel-title"><div><small>NETSCOPE / PING MONITOR</small><h3>پایش زندهٔ اتصال</h3></div><span className="connection-mode"><i className={ping?.ok?"live-dot":"ping-dot-off"}/>{desktop?"آزمون از رایانه ویندوز":"برای آزمون مستقیم، نسخه ویندوز را اجرا کن"}</span></div><div className="ping-layout"><div className="ping-metrics"><div><span>میانگین تأخیر</span><b>{fmt(ping?.avgMs)}</b></div><div><span>اتلاف بسته</span><b>{ping?.loss!=null?`${ping.loss}٪`:"—"}</b></div><div><span>بازه پاسخ</span><b>{ping?.minMs!=null&&ping?.maxMs!=null?`${Math.round(ping.minMs)}–${Math.round(ping.maxMs)} ms`:"—"}</b></div></div><div className="ping-chart"><small>۳۰ آزمون اخیر</small><svg viewBox="0 0 280 58" role="img" aria-label="نمودار تاریخچه پینگ"><polyline points={pingHistory.slice(0,30).slice().reverse().map((item:any,index:number)=>`${index*9.2},${Math.max(5,52-Math.min(45,Number(item.avg_ms||0)/4))}`).join(" ")} fill="none" stroke="#5dd9bf" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg><span>{pingHistory.length? `${pingHistory.length} رکورد ذخیره‌شده`:"پس از ورود، تاریخچه ذخیره می‌شود"}</span></div><button className="btn btn-primary ping-run" disabled={!desktop||pingBusy} onClick={pingTest}>{pingBusy?<RefreshCw className="spin" size={15}/>:<Activity size={15}/>} {pingBusy?"در حال اندازه‌گیری":"اجرای Ping"}</button></div><div className="ping-history-list">{pingHistory.slice(0,4).map((item:any)=><span key={item.id} className={item.success&&Number(item.packet_loss)===0?"history-good":"history-bad"}><i/>{new Date(item.tested_at).toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"})} · {item.success?`${Math.round(Number(item.avg_ms||0))} ms`:"قطع ارتباط"} · اتلاف {Number(item.packet_loss||0)}٪</span>)}</div></div>
     <div className="dns-hero"><div className="dns-orb"><Network size={30}/></div><div className="dns-hero-copy"><small>RESOLVER BENCHMARK</small><h3>کدام DNS در شبکه تو بهتر جواب می‌دهد؟</h3><p>زمان پاسخ، قابلیت Resolve و دسترسی‌پذیری را مقایسه کن؛ این نتایج تضمین سرعت یا امنیت نیستند.</p></div><div className="dns-summary"><b>{results.length?results.filter((r:DNSResult)=>r.ok).length.toLocaleString("fa-IR"):"—"}</b><small>پاسخ موفق</small></div></div>
     {showAdd&&<form className="panel add-dns-form" onSubmit={add}><div className="panel-title"><div><small>CUSTOM RESOLVER</small><h3>افزودن DNS شخصی</h3></div><button type="button" className="icon-button" onClick={()=>setShowAdd(false)}>×</button></div><div className="form-grid"><label>نام سرویس<input value={customName} onChange={e=>setCustomName(e.target.value)} placeholder="مثلاً DNS منزل" required/></label><label>IPv4 یا IPv6<input value={customIp} onChange={e=>setCustomIp(e.target.value)} placeholder="1.1.1.1"/></label><label className="wide-field">نشانی DNS-over-HTTPS (اختیاری)<input value={customDoh} onChange={e=>setCustomDoh(e.target.value)} placeholder="https://dns.example/dns-query"/></label></div><div className="form-actions"><small>آدرس‌ها فقط برای حساب خودت ذخیره می‌شوند.</small><button className="btn btn-primary" type="submit"><Check size={15}/> ذخیره DNS</button></div></form>}
     <div className="dns-control panel"><div className="control-head"><div><small>TEST CONFIGURATION</small><b>تنظیم آزمایش</b></div><span className="connection-mode"><i className="live-dot"/>{desktop?"تست مستقیم از ویندوز":"تست DoH از مرورگر"}</span></div><div className="dns-inputs"><label><span>دامنه آزمایشی</span><input value={domain} onChange={e=>setDomain(e.target.value)} placeholder="example.com"/></label><label><span>جستجوی سرویس</span><div className="search-wrap"><Search size={15}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="نام یا IP سرویس"/></div></label><button className="btn btn-primary run-button" disabled={busy||!domain.trim()} onClick={run}>{busy?<RefreshCw className="spin" size={16}/>:<Activity size={16}/>} {busy?"در حال آزمایش":"شروع تست همه"}</button></div><div className="filter-row">{categories.map((c:string)=><button key={c} onClick={()=>setFilter(c)} className={filter===c?"filter-chip selected":"filter-chip"}>{c}</button>)}<button className="refresh-link" onClick={refresh}><RefreshCw size={13}/> تازه‌سازی</button></div></div>
