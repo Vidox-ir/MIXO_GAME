@@ -5,7 +5,7 @@ import {
   ChevronDown, CircleHelp, Clock3, Cpu, Crosshair, Download, Eye, EyeOff,
   Gamepad2, Globe2, HardDrive, Layers3, LockKeyhole, LogOut, Mail, MapPin,
   Menu, Monitor, Network, Plus, RefreshCw, Search, Settings2, ShieldCheck,
-  Sparkles, Swords, TerminalSquare, Trophy, Wifi, Zap
+  Sparkles, Swords, TerminalSquare, Trophy, Wifi, Zap, FolderOpen, Trash2
 } from "lucide-react";
 import { supabase } from "./lib/supabase";
 import { testResolver, testCustomResolver, isValidIp } from "./services/dns";
@@ -221,9 +221,19 @@ function App() {
     e.preventDefault();if(!session?.user||!supabase){requireAuth("dns");return;}
     if(!customName.trim()||(!isValidIp(customIp)&&!customDoh.trim())){notify("نام و یک IP معتبر یا نشانی DoH وارد کن.");return;}
     if(customDoh.trim()){try{const u=new URL(customDoh);if(u.protocol!=="https:")throw new Error();}catch{notify("نشانی DoH باید HTTPS معتبر باشد.");return;}}
-    const payload={user_id:session.user.id,name:customName.trim(),ipv4:isValidIp(customIp)?customIp.trim():null,ipv6:null,doh_url:customDoh.trim()||null};
+    const ip=customIp.trim();
+    if(ip&&!isValidIp(ip)){notify("نشانی IP معتبر نیست.");return;}
+    const ipv4=ip&&!ip.includes(":")?ip:null;
+    const ipv6=ip&&ip.includes(":")?ip:null;
+    const payload={user_id:session.user.id,name:customName.trim(),ipv4,ipv6,doh_url:customDoh.trim()||null};
     const {data,error}=await supabase.from("custom_dns_servers").insert(payload).select().single();
     if(error){notify(error.message);return;}setCustomDns(old=>[data,...old]);setCustomName("");setCustomIp("");setCustomDoh("");notify("DNS اختصاصی اضافه شد.");
+  };
+  const removeCustomDns=async(id:string)=>{
+    if(!supabase||!session?.user)return;
+    const {error}=await supabase.from("custom_dns_servers").delete().eq("id",id).eq("user_id",session.user.id);
+    if(error){notify(error.message);return;}
+    setCustomDns(old=>old.filter(item=>item.id!==id));setDnsResults(old=>old.filter(item=>item.id!==id));notify("DNS اختصاصی حذف شد.");
   };
   const pingTest=async()=>{
     if(!window.desktopAPI){notify("تست Ping دقیق به برنامه ویندوز نیاز دارد.");return;}
@@ -256,6 +266,19 @@ function App() {
     if(!game.install_path){notify("برای این بازی هنوز فایل اجرایی انتخاب نشده است.");return;}
     const r=await window.desktopAPI.launchGame(game.install_path,game.launch_args||"");
     notify(r.ok?"درخواست اجرای بازی ارسال شد.":r.error||"اجرای بازی ناموفق بود.");
+  };
+  const removeGame=async(id:string)=>{
+    if(!supabase||!session?.user)return;
+    const {error}=await supabase.from("game_library_entries").delete().eq("id",id).eq("user_id",session.user.id);
+    if(error){notify(error.message);return;}
+    setGames(old=>old.filter(game=>game.id!==id));notify("بازی از کتابخانه حذف شد.");
+  };
+  const changeGamePath=async(game:any)=>{
+    if(!window.desktopAPI||!supabase||!session?.user){notify("تغییر مسیر در برنامه ویندوز انجام می‌شود.");return;}
+    const path=await window.desktopAPI.pickExecutable();if(!path)return;
+    const {data,error}=await supabase.from("game_library_entries").update({install_path:path}).eq("id",game.id).eq("user_id",session.user.id).select().single();
+    if(error){notify(error.message);return;}
+    setGames(old=>old.map(item=>item.id===game.id?data:item));notify("مسیر اجرای بازی به‌روز شد.");
   };
   const answerMission=async()=>{
     if(!requireAuth("ghost")||!supabase||!activeMission||answer===null)return;
@@ -303,8 +326,8 @@ function App() {
       </header>
       <div className="content">
         {page==="home"&&<HomePage session={session} profile={profile} desktop={desktop} ping={ping} avgLatency={avgLatency} go={setPage} requireAuth={requireAuth} games={games} dnsCount={dnsRows.length} worldPlayer={worldPlayer}/>}
-        {page==="games"&&<GamesPage games={games} desktop={desktop} add={pickGame} launch={launchGame} notify={notify}/>}
-        {page==="dns"&&<DNSPage rows={visibleDns} allRows={dnsRows} custom={customDns} results={dnsResults} busy={dnsBusy} search={dnsSearch} setSearch={setDnsSearch} filter={dnsFilter} setFilter={setDnsFilter} domain={dnsDomain} setDomain={setDnsDomain} run={runDns} add={addCustomDns} customName={customName} setCustomName={setCustomName} customIp={customIp} setCustomIp={setCustomIp} customDoh={customDoh} setCustomDoh={setCustomDoh} desktop={desktop} refresh={refreshDns} ping={ping} pingHistory={pingHistory} pingTest={pingTest} pingBusy={saving}/>}
+        {page==="games"&&<GamesPage games={games} desktop={desktop} add={pickGame} launch={launchGame} remove={removeGame} changePath={changeGamePath} notify={notify}/>}
+        {page==="dns"&&<DNSPage rows={visibleDns} allRows={dnsRows} custom={customDns} results={dnsResults} busy={dnsBusy} search={dnsSearch} setSearch={setDnsSearch} filter={dnsFilter} setFilter={setDnsFilter} domain={dnsDomain} setDomain={setDnsDomain} run={runDns} add={addCustomDns} removeCustom={removeCustomDns} customName={customName} setCustomName={setCustomName} customIp={customIp} setCustomIp={setCustomIp} customDoh={customDoh} setCustomDoh={setCustomDoh} desktop={desktop} refresh={refreshDns} ping={ping} pingHistory={pingHistory} pingTest={pingTest} pingBusy={saving}/>}
         {page==="ghost"&&<GhostPage session={session} missions={missions} progress={ghostProgress} active={activeMission} setActive={setActiveMission} answer={answer} setAnswer={setAnswer} submit={answerMission} saving={saving} requireAuth={()=>requireAuth("ghost")}/>}
         {page==="world"&&<WorldPage session={session} player={worldPlayer} locations={worldLocations} claims={worldClaims} claim={claimLocation} saving={saving} requireAuth={()=>requireAuth("world")}/>}
         {page==="account"&&<AccountPage session={session} profile={profile} network={network} desktop={desktop} logout={logout} startAuth={startAuth}/>}
@@ -341,28 +364,28 @@ function HomePage({session,profile,desktop,ping,avgLatency,go,requireAuth,games,
 function ModuleCard({icon,index,title,desc,meta,onClick,tone}:any){
   return <button className={`module-card ${tone}`} onClick={onClick}><div className="module-top"><div className="module-icon">{icon}</div><span>{index}</span></div><h3>{title}</h3><p>{desc}</p><div className="module-bottom"><small>{meta}</small><i><ArrowLeft size={15}/></i></div></button>;
 }
-function GamesPage({games,desktop,add,launch,notify}:any){
+function GamesPage({games,desktop,add,launch,remove,changePath,notify}:any){
   return <><PageHeading eyebrow="NEXUS / GAME LIBRARY" title="کتابخانه بازی" desc="بازی‌هایت را در یک‌جا مدیریت کن؛ مسیر اجرایی را انتخاب و از داخل لانچر اجرا کن." action={<button className="btn btn-primary" onClick={()=>add()}><Plus size={16}/> افزودن بازی</button>}/>
     <div className="library-banner"><div className="library-icon"><Gamepad2 size={30}/></div><div><b>کتابخانه شخصی NEXUS</b><span>مسیر فایل‌های اجرایی روی همین رایانه ذخیره می‌شود و برای اجرای بازی به برنامه ویندوز نیاز است.</span></div><div className="banner-count"><strong>{games.length.toLocaleString("fa-IR")}</strong><small>بازی ثبت‌شده</small></div></div>
     <div className="section-head"><div><small>YOUR COLLECTION</small><h2>بازی‌های من</h2></div><span>{desktop?"اجرای مستقیم در نسخه دسکتاپ":"برای اجرای مستقیم، نسخه ویندوز را باز کن"}</span></div>
-    <div className="game-grid">{games.map((g:any,i:number)=><div className="game-card" key={g.id}><div className={`game-art ${gameSeeds.find(s=>g.title?.includes(s.name))?.color||["game-blue","game-purple","game-amber"][i%3]}`}><span>{g.title?.slice(0,2).toUpperCase()}</span><small>PC / WINDOWS</small></div><div className="game-info"><div><b>{g.title}</b><small>{g.platform||"Windows"} · {g.install_path?"مسیر ثبت شده":"بدون مسیر اجرا"}</small></div><button className="launch-button" onClick={()=>launch(g)} disabled={!g.install_path||!desktop}><Zap size={15}/></button></div></div>)}
+    <div className="game-grid">{games.map((g:any,i:number)=><div className="game-card" key={g.id}><div className={`game-art ${gameSeeds.find(s=>g.title?.includes(s.name))?.color||["game-blue","game-purple","game-amber"][i%3]}`}><span>{g.title?.slice(0,2).toUpperCase()}</span><small>PC / WINDOWS</small></div><div className="game-info"><div><b>{g.title}</b><small>{g.platform||"Windows"} · {g.install_path?"مسیر ثبت شده":"بدون مسیر اجرا"}</small></div><div className="game-actions"><button className="path-button" onClick={()=>changePath(g)} disabled={!desktop} title="تغییر مسیر اجرا" aria-label="تغییر مسیر اجرا"><FolderOpen size={14}/></button><button className="launch-button" onClick={()=>launch(g)} disabled={!g.install_path||!desktop} title="اجرای بازی" aria-label="اجرای بازی"><Zap size={15}/></button><button className="remove-button" onClick={()=>remove(g.id)} title="حذف از کتابخانه" aria-label="حذف از کتابخانه"><Trash2 size={14}/></button></div></div></div>)}
       {gameSeeds.filter(seed=>!games.some((g:any)=>g.title===seed.name)).map(seed=><div className="game-card seed-card" key={seed.code}><div className={`game-art ${seed.color}`}><span>{seed.code}</span><small>GAME SLOT</small></div><div className="game-info"><div><b>{seed.name}</b><small>{seed.genre}</small></div><button className="add-game-button" onClick={()=>add(seed)} title="افزودن مسیر بازی"><Plus size={16}/></button></div></div>)}
     </div><div className="hint-line"><CircleHelp size={15}/> نسخه وب می‌تواند کتابخانه را مدیریت کند؛ انتخاب فایل EXE و اجرای بازی فقط در برنامه ویندوز فعال است.</div>
   </>;
 }
-function DNSPage({rows,allRows,custom,results,busy,search,setSearch,filter,setFilter,domain,setDomain,run,add,customName,setCustomName,customIp,setCustomIp,customDoh,setCustomDoh,desktop,refresh,ping,pingHistory,pingTest,pingBusy}:any){
+function DNSPage({rows,allRows,custom,results,busy,search,setSearch,filter,setFilter,domain,setDomain,run,add,removeCustom,customName,setCustomName,customIp,setCustomIp,customDoh,setCustomDoh,desktop,refresh,ping,pingHistory,pingTest,pingBusy}:any){
   const [showAdd,setShowAdd]=useState(false);
   const categories: string[] = ["همه", ...Array.from(new Set<string>((allRows as DNSRecord[]).map((r:DNSRecord)=>r.category)))];
   const resultById=new Map(results.map((r:DNSResult)=>[r.id,r]));
   return <><PageHeading eyebrow="NETSCOPE / RESOLVER LAB" title="آزمایشگاه DNS" desc="سرویس‌ها را از مسیر واقعی اتصال خودت آزمایش کن؛ نتیجه به اپراتور، موقعیت و مسیر شبکه وابسته است." action={<button className="btn btn-ghost" onClick={()=>setShowAdd(v=>!v)}><Plus size={16}/> DNS اختصاصی</button>}/>
     <div className="ping-panel panel"><div className="panel-title"><div><small>NETSCOPE / PING MONITOR</small><h3>پایش زندهٔ اتصال</h3></div><span className="connection-mode"><i className={ping?.ok?"live-dot":"ping-dot-off"}/>{desktop?"آزمون از رایانه ویندوز":"برای آزمون مستقیم، نسخه ویندوز را اجرا کن"}</span></div><div className="ping-layout"><div className="ping-metrics"><div><span>میانگین تأخیر</span><b>{fmt(ping?.avgMs)}</b></div><div><span>اتلاف بسته</span><b>{ping?.loss!=null?`${ping.loss}٪`:"—"}</b></div><div><span>بازه پاسخ</span><b>{ping?.minMs!=null&&ping?.maxMs!=null?`${Math.round(ping.minMs)}–${Math.round(ping.maxMs)} ms`:"—"}</b></div></div><div className="ping-chart"><small>۳۰ آزمون اخیر</small><svg viewBox="0 0 280 58" role="img" aria-label="نمودار تاریخچه پینگ"><polyline points={pingHistory.slice(0,30).slice().reverse().map((item:any,index:number)=>`${index*9.2},${Math.max(5,52-Math.min(45,Number(item.avg_ms||0)/4))}`).join(" ")} fill="none" stroke="#5dd9bf" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg><span>{pingHistory.length? `${pingHistory.length} رکورد ذخیره‌شده`:"پس از ورود، تاریخچه ذخیره می‌شود"}</span></div><button className="btn btn-primary ping-run" disabled={!desktop||pingBusy} onClick={pingTest}>{pingBusy?<RefreshCw className="spin" size={15}/>:<Activity size={15}/>} {pingBusy?"در حال اندازه‌گیری":"اجرای Ping"}</button></div><div className="ping-history-list">{pingHistory.slice(0,4).map((item:any)=><span key={item.id} className={item.success&&Number(item.packet_loss)===0?"history-good":"history-bad"}><i/>{new Date(item.tested_at).toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"})} · {item.success?`${Math.round(Number(item.avg_ms||0))} ms`:"قطع ارتباط"} · اتلاف {Number(item.packet_loss||0)}٪</span>)}</div></div>
     <div className="dns-hero"><div className="dns-orb"><Network size={30}/></div><div className="dns-hero-copy"><small>RESOLVER BENCHMARK</small><h3>کدام DNS در شبکه تو بهتر جواب می‌دهد؟</h3><p>زمان پاسخ، قابلیت Resolve و دسترسی‌پذیری را مقایسه کن؛ این نتایج تضمین سرعت یا امنیت نیستند.</p></div><div className="dns-summary"><b>{results.length?results.filter((r:DNSResult)=>r.ok).length.toLocaleString("fa-IR"):"—"}</b><small>پاسخ موفق</small></div></div>
-    {showAdd&&<form className="panel add-dns-form" onSubmit={add}><div className="panel-title"><div><small>CUSTOM RESOLVER</small><h3>افزودن DNS شخصی</h3></div><button type="button" className="icon-button" onClick={()=>setShowAdd(false)}>×</button></div><div className="form-grid"><label>نام سرویس<input value={customName} onChange={e=>setCustomName(e.target.value)} placeholder="مثلاً DNS منزل" required/></label><label>IPv4 یا IPv6<input value={customIp} onChange={e=>setCustomIp(e.target.value)} placeholder="1.1.1.1"/></label><label className="wide-field">نشانی DNS-over-HTTPS (اختیاری)<input value={customDoh} onChange={e=>setCustomDoh(e.target.value)} placeholder="https://dns.example/dns-query"/></label></div><div className="form-actions"><small>آدرس‌ها فقط برای حساب خودت ذخیره می‌شوند.</small><button className="btn btn-primary" type="submit"><Check size={15}/> ذخیره DNS</button></div></form>}
+    {showAdd&&<form className="panel add-dns-form" onSubmit={add}><div className="panel-title"><div><small>CUSTOM RESOLVER</small><h3>افزودن DNS شخصی</h3></div><button type="button" className="icon-button" onClick={()=>setShowAdd(false)}>×</button></div><div className="form-grid"><label>نام سرویس<input value={customName} onChange={e=>setCustomName(e.target.value)} placeholder="مثلاً DNS منزل" required/></label><label>IPv4 یا IPv6<input value={customIp} onChange={e=>setCustomIp(e.target.value)} placeholder="1.1.1.1 یا 2606:4700:4700::1111"/></label><label className="wide-field">نشانی DNS-over-HTTPS (اختیاری)<input value={customDoh} onChange={e=>setCustomDoh(e.target.value)} placeholder="https://dns.example/dns-query"/></label></div><div className="form-actions"><small>آدرس‌ها فقط برای حساب خودت ذخیره می‌شوند.</small><button className="btn btn-primary" type="submit"><Check size={15}/> ذخیره DNS</button></div></form>}
     <div className="dns-control panel"><div className="control-head"><div><small>TEST CONFIGURATION</small><b>تنظیم آزمایش</b></div><span className="connection-mode"><i className="live-dot"/>{desktop?"تست مستقیم از ویندوز":"تست DoH از مرورگر"}</span></div><div className="dns-inputs"><label><span>دامنه آزمایشی</span><input value={domain} onChange={e=>setDomain(e.target.value)} placeholder="example.com"/></label><label><span>جستجوی سرویس</span><div className="search-wrap"><Search size={15}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="نام یا IP سرویس"/></div></label><button className="btn btn-primary run-button" disabled={busy||!domain.trim()} onClick={run}>{busy?<RefreshCw className="spin" size={16}/>:<Activity size={16}/>} {busy?"در حال آزمایش":"شروع تست همه"}</button></div><div className="filter-row">{categories.map((c:string)=><button key={c} onClick={()=>setFilter(c)} className={filter===c?"filter-chip selected":"filter-chip"}>{c}</button>)}<button className="refresh-link" onClick={refresh}><RefreshCw size={13}/> تازه‌سازی</button></div></div>
     <div className="section-head"><div><small>PUBLIC + CUSTOM RESOLVERS</small><h2>فهرست سرویس‌ها</h2></div><span>{rows.length+custom.length} سرویس قابل نمایش</span></div>
     <div className="dns-table-wrap panel"><div className="dns-table-head"><span>سرویس / خانواده</span><span>نشانی‌ها</span><span>نوع آزمایش</span><span>وضعیت / زمان</span></div>
       {rows.map((s:DNSRecord)=>{const r=resultById.get(s.slug) as DNSResult|undefined;return <div className="dns-row" key={s.slug}><div className="dns-name"><span className="dns-logo">{s.name.slice(0,1)}</span><div><b>{s.name}</b><small>{s.category} · <a href={s.source_url||s.website||"#"} target="_blank" rel="noreferrer">منبع اطلاعات</a></small></div></div><div className="ip-stack"><code>{s.primary_ipv4||s.primary_ipv6||"—"}</code><small>{s.secondary_ipv4||s.secondary_ipv6||s.doh_url||"بدون نشانی جایگزین"}</small></div><div className="transport-cell">{desktop?"DNS مستقیم":"DNS-over-HTTPS"}</div><div className="dns-result">{r?<><span className={r.ok?"status-ok":"status-bad"}>{r.ok?<Check size={12}/>:<Activity size={12}/>} {r.status}</span><b>{fmt(r.ms)}</b></>:<span className="status-wait">آزمایش نشده</span>}</div></div>})}
-      {custom.map((s:any)=>{const r=resultById.get(s.id) as DNSResult|undefined;return <div className="dns-row" key={s.id}><div className="dns-name"><span className="dns-logo custom-logo">+</span><div><b>{s.name}</b><small>DNS شخصی</small></div></div><div className="ip-stack"><code>{s.ipv4||s.ipv6||"DoH"}</code><small>{s.doh_url||"آدرس ثبت‌شده"}</small></div><div className="transport-cell">{desktop?"DNS مستقیم":"DNS-over-HTTPS"}</div><div className="dns-result">{r?<><span className={r.ok?"status-ok":"status-bad"}>{r.status}</span><b>{fmt(r.ms)}</b></>:<span className="status-wait">آزمایش نشده</span>}</div></div>})}
+      {custom.map((s:any)=>{const r=resultById.get(s.id) as DNSResult|undefined;return <div className="dns-row" key={s.id}><div className="dns-name"><span className="dns-logo custom-logo">+</span><div><b>{s.name}</b><small>DNS شخصی</small></div></div><div className="ip-stack"><code>{s.ipv4||s.ipv6||"DoH"}</code><small>{s.doh_url||"آدرس ثبت‌شده"}</small></div><div className="transport-cell">{desktop?"DNS مستقیم":"DNS-over-HTTPS"}</div><div className="dns-result">{r?<><span className={r.ok?"status-ok":"status-bad"}>{r.status}</span><b>{fmt(r.ms)}</b></>:<span className="status-wait">آزمایش نشده</span>}<button className="remove-button" onClick={()=>removeCustom(s.id)} title="حذف DNS اختصاصی" aria-label="حذف DNS اختصاصی"><Trash2 size={13}/></button></div></div>})}
       {!rows.length&&!custom.length&&<div className="empty-state">فهرست DNS هنوز بارگذاری نشده است.</div>}
     </div><div className="hint-line"><ShieldCheck size={15}/> تست مرورگر فقط DoH را می‌سنجد. نسخه ویندوز می‌تواند IP resolver را مستقیم از دستگاه آزمایش کند؛ آزمون DNSSEC، نشت DNS و فیلترینگ اختصاصی در مرحله بعدی اضافه می‌شود.</div>
   </>;
