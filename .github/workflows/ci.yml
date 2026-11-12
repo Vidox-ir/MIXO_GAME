@@ -73,16 +73,22 @@ jobs:
             exit 0
           fi
 
-          shopt -s nullglob
-          files=(dist-artifacts/release/*.exe dist-artifacts/release-portable/*.exe)
-          if [ "${#files[@]}" -ne 2 ]; then
-            echo "Expected two Windows EXE files; found ${#files[@]}."
-            printf '%s\n' "${files[@]}"
+          nsis="dist-artifacts/release/MIXO-GAME-0.1.0-x64.exe"
+          portable="dist-artifacts/release-portable/MIXO-GAME-0.1.0-x64.exe"
+          if [ ! -f "$nsis" ] || [ ! -f "$portable" ]; then
+            echo "Installer or portable EXE is missing from the downloaded artifact."
+            find dist-artifacts -maxdepth 3 -type f -print
             exit 1
           fi
 
-          gh release create v0.1.0 "${files[@]}" \
+          installer_asset="dist-artifacts/MIXO-GAME-Setup-0.1.0-x64.exe"
+          portable_asset="dist-artifacts/MIXO-GAME-Portable-0.1.0-x64.exe"
+          cp "$nsis" "$installer_asset"
+          cp "$portable" "$portable_asset"
+          sha256sum "$installer_asset" "$portable_asset" > dist-artifacts/SHA256SUMS.txt
+
+          gh release create v0.1.0 "$installer_asset" "$portable_asset" dist-artifacts/SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "MIXO GAME v0.1.0" \
-            --notes "اولین انتشار عمومی MIXO GAME. شامل نسخه نصب‌شونده ویندوز و نسخه Portable برای Windows 10/11."
+            --notes "اولین انتشار عمومی MIXO GAME. شامل نسخه نصب‌شونده ویندوز و نسخه Portable برای Windows 10/11. فایل SHA256SUMS.txt برای بررسی یکپارچگی دانلودهاست."
