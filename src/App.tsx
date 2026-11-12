@@ -86,7 +86,7 @@ function App() {
   },[]);
 
   useEffect(() => {
-    if (!session?.user || !supabase) { setProfile(null); setGames([]); setCustomDns([]); setMissions([]); setGhostProgress([]); setWorldClaims([]); setWorldPlayer(null); return; }
+    if (!session?.user || !supabase) { setProfile(null); setGames([]); setCustomDns([]); setMissions([]); setGhostProgress([]); setWorldClaims([]); setWorldPlayer(null); setPingHistory([]); return; }
     const uid = session.user.id;
     Promise.all([
       supabase.from("profiles").select("*").eq("user_id",uid).maybeSingle(),
