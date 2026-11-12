@@ -50,3 +50,39 @@ jobs:
             release-portable/*.exe
           if-no-files-found: error
           retention-days: 14
+  publish-release:
+    name: Publish permanent Windows release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: windows-package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: MIXO-GAME-Windows
+          path: dist-artifacts
+      - name: Publish v0.1.0 once
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          if gh release view v0.1.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release v0.1.0 already exists; keeping the published files unchanged."
+            exit 0
+          fi
+
+          shopt -s nullglob
+          files=(dist-artifacts/release/*.exe dist-artifacts/release-portable/*.exe)
+          if [ "${#files[@]}" -ne 2 ]; then
+            echo "Expected two Windows EXE files; found ${#files[@]}."
+            printf '%s\n' "${files[@]}"
+            exit 1
+          fi
+
+          gh release create v0.1.0 "${files[@]}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "MIXO GAME v0.1.0" \
+            --notes "اولین انتشار عمومی MIXO GAME. شامل نسخه نصب‌شونده ویندوز و نسخه Portable برای Windows 10/11."
