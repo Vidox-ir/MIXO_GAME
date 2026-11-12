@@ -36,7 +36,7 @@ jobs:
       - run: npm run dist:win
         env:
           VITE_SUPABASE_URL: https://ntymdsrpmsxmrvwvuiad.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_H-lHD1fZ_rMt798i_RmoRQ_Lzd1b3iW
       - uses: actions/upload-artifact@v4
         with:
           name: MIXO-GAME-Windows
