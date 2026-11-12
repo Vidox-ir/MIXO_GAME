@@ -48,6 +48,36 @@
 
 در حال حاضر حساب Resend متصل، دامنه تأییدشده ندارد؛ بنابراین ارسال عمومی ایمیل هنوز فعال نشده است. کلیدهای Resend و Supabase Secret را هرگز در کد کلاینت، GitHub یا فایل اجرایی قرار نده.
 
+### قالب‌های OTP برای ثبت‌نام و بازیابی رمز
+
+در Supabase → Authentication → Email Templates این دو قالب را به حالت کد یک‌بارمصرف تغییر بده؛ برنامه کد را در فرم دریافت و با `verifyOtp` بررسی می‌کند:
+
+**Confirm signup**
+```html
+<h2>تأیید ایمیل MIXO GAME</h2>
+<p>کد شش‌رقمی فعال‌سازی حساب شما:</p>
+<p style="font-size:28px;letter-spacing:8px;font-weight:700">{{ .Token }}</p>
+<p>این کد را فقط در برنامه وارد کنید. اگر شما ثبت‌نام نکرده‌اید، این پیام را نادیده بگیرید.</p>
+```
+
+**Reset password**
+```html
+<h2>بازیابی رمز MIXO GAME</h2>
+<p>کد شش‌رقمی بازیابی رمز شما:</p>
+<p style="font-size:28px;letter-spacing:8px;font-weight:700">{{ .Token }}</p>
+<p>اگر شما درخواست بازیابی نداده‌اید، این پیام را نادیده بگیرید.</p>
+```
+
+در Auth → SMTP Settings، SMTP سفارشی را روشن و مقادیر Resend را وارد کن:
+- Host: `smtp.resend.com`
+- Port: `465` (SSL) یا `587` (STARTTLS)
+- Username: `resend`
+- Password: کلید API ارسال Resend
+- Sender email: نشانی‌ای مانند `no-reply@auth.yourdomain.tld` از دامنه‌ای که در Resend تأیید شده
+- Sender name: `MIXO GAME`
+
+همچنین Site URL و Redirect URLs را روی آدرس نهایی وب تنظیم کن؛ برای نسخه وب GitHub Pages از `https://vidox-ir.github.io/MIXO_GAME/` استفاده می‌شود. در جریان OTP، برنامه به بازگشت از لینک ایمیل متکی نیست و کد را مستقیم داخل وب یا نسخه ویندوز می‌گیرد.
+
 ## ماژول‌ها
 - **NEXUS:** کتابخانه بازی، ثبت مسیر EXE و اجرای مستقیم فقط در نسخه دسکتاپ.
 - **NetScope:** فهرست ۲۵ سرویس DNS، تست DoH در وب و DNS مستقیم از ویندوز؛ نمودار Ping و تاریخچهٔ نتایج/قطعی‌ها برای کاربران واردشده.
