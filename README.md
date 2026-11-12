@@ -13,7 +13,7 @@
 - Electron برای برنامه ویندوز
 - Supabase Auth + Postgres + RLS
 - Resend به‌عنوان SMTP تراکنشی برای ایمیل Supabase (پس از اتصال دامنه فرستنده)
-- فونت‌ها: Cairo (عنوان)، Changa (تأکید)، IBM Plex Sans Arabic (متن)، بدون Vazirmatn
+- فونت‌ها: Almarai (تیتر فارسی)، Readex Pro (متن)، Chakra Petch (برچسب‌های فنی)، JetBrains Mono (داده‌های عددی)؛ بدون Vazirmatn
 
 ## راه‌اندازی
 1. Node.js نسخه 22.12 یا بالاتر را نصب کن.
@@ -80,7 +80,7 @@
 
 ## ماژول‌ها
 - **NEXUS:** کتابخانه بازی، ثبت مسیر EXE و اجرای مستقیم فقط در نسخه دسکتاپ.
-- **NetScope:** فهرست ۲۵ سرویس DNS، تست DoH در وب و DNS مستقیم از ویندوز؛ نمودار Ping و تاریخچهٔ نتایج/قطعی‌ها برای کاربران واردشده.
+- **NetScope:** فهرست ۲۵ سرویس DNS، تست DoH در وب و DNS مستقیم از ویندوز؛ پایش Ping هر ۶۰ ثانیه، نمودار و تاریخچهٔ نتایج/قطعی‌ها برای کاربران واردشده.
 - **Ghost Protocol:** سناریوهای آموزشی ساختگی؛ بررسی پاسخ و ثبت XP با RPC سمت دیتابیس.
 - **Parallel World:** نقشه داستانی، تصرف منطقه و پاداش منابع از طریق RPC سمت دیتابیس.
 
@@ -90,7 +90,7 @@
 - تست مرورگر از DNS-over-HTTPS استفاده می‌کند؛ تست IP مستقیم و Ping فقط در Electron ممکن است.
 - DNSها از چند منبع رسمی/عمومی گردآوری شده‌اند؛ نتیجه واقعی به اپراتور، مسیر، IPv4/IPv6 و فیلترینگ وابسته است. مقایسه سرعت، تضمین امنیت نیست.
 
-## وضعیت ساخت ویندوز\n\n- `npm run dist:win` نصاب NSIS ویندوز را می‌سازد.\n- `npm run dist:portable` نسخهٔ Portable را می‌سازد.\n- انتشار خودکار به GitHub Release غیرفعال است؛ CI فایل‌های تولیدشده را به‌عنوان Artifact بارگذاری می‌کند و به Personal Access Token نیاز ندارد.\n\n## Branch plan
+## وضعیت ساخت ویندوز\n\n- `npm run dist:win` نصاب NSIS ویندوز را می‌سازد.\n- `npm run dist:portable` نسخهٔ Portable را در پوشهٔ جداگانهٔ `release-portable` می‌سازد.\n- انتشار خودکار به GitHub Release غیرفعال است؛ CI فایل‌های تولیدشده را به‌عنوان Artifact بارگذاری می‌کند و به Personal Access Token نیاز ندارد.\n\n## گردش کار GitHub\n\n- توسعهٔ روزمره در شاخهٔ `develop` انجام می‌شود.\n- تا پیش از آماده‌شدن نسخهٔ قابل انتشار، نیازی به Pull Request نیست.\n- وقتی آزمون‌های محصول و ایمیل کامل شدند، یک Pull Request از `develop` به `main` باز می‌شود؛ ادغام دستی و پس از بررسی انجام خواهد شد.\n\n## Branch plan
 - `develop` — یکپارچه‌سازی و نسخه آزمایشی
 - `feature/nexus-launcher` — کتابخانه و اجرای بازی
 - `feature/netscope-dns` — موتور DNS و پایش شبکه
