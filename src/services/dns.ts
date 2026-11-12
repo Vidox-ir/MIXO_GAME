@@ -137,8 +137,8 @@ async function testDoH(endpoint: string, domain: string) {
       return { type, error: error instanceof Error ? error.message : "خطای ناشناخته" };
     }
   }));
-  const successful = results.filter(item => "response" in item && item.response.status === 0);
-  const values = results.flatMap(item => "response" in item ? item.response.answers.map(answer => `${answer.type}: ${answer.value}`) : []);
+  const successful = results.filter(item => "response" in item && item.response?.status === 0);
+  const values = results.flatMap(item => ("response" in item && item.response ? item.response.answers.map(answer => `${answer.type}: ${answer.value}`) : []));
   const errors = results.filter(item => "error" in item).map(item => `${item.type}: ${item.error}`);
   const ok = successful.length > 0 && values.length > 0;
   const detail = values.length ? values.join(" · ") : errors.join(" | ") || "هیچ رکوردی دریافت نشد.";
