@@ -105,9 +105,34 @@ function App() {
 
   useEffect(() => {
     if (!window.desktopAPI) return;
-    window.desktopAPI.networkInfo().then(setNetwork).catch(()=>{});
-    window.desktopAPI.pingHost("1.1.1.1").then(setPing).catch(()=>{});
-  },[]);
+    let cancelled = false;
+    let running = false;
+    window.desktopAPI.networkInfo().then(info=>{if(!cancelled)setNetwork(info)}).catch(()=>{});
+    const monitor = async () => {
+      if (running || !window.desktopAPI) return;
+      running = true;
+      try {
+        const result = await window.desktopAPI.pingHost("1.1.1.1");
+        if (cancelled) return;
+        setPing(result);
+        if (session?.user && supabase) {
+          const {data,error} = await supabase.from("network_test_runs").insert({
+            user_id:session.user.id,target_host:"1.1.1.1",avg_ms:result.avgMs,
+            min_ms:result.minMs,max_ms:result.maxMs,packet_loss:result.loss,
+            success:result.ok,raw_output:result.raw||""
+          }).select().single();
+          if (!error && data && !cancelled) setPingHistory(old=>[data,...old].slice(0,30));
+        }
+      } catch {
+        if (!cancelled) setPing({ok:false,avgMs:null,minMs:null,maxMs:null,loss:100,raw:"آزمون شبکه ناموفق بود."});
+      } finally {
+        running = false;
+      }
+    };
+    void monitor();
+    const interval = window.setInterval(monitor,60000);
+    return () => {cancelled=true;window.clearInterval(interval);};
+  },[session?.user?.id]);
 
   useEffect(() => {
     if(!session?.user||!supabase)return;
