@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: mixo-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   web-build:
     name: TypeScript and web production build
@@ -27,6 +31,9 @@ jobs:
   windows-package:
     name: Windows 10/11 installer and portable EXE
     runs-on: windows-latest
+    env:
+      VITE_SUPABASE_URL: https://ntymdsrpmsxmrvwvuiad.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_H-lHD1fZ_rMt798i_RmoRQ_Lzd1b3iW
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,9 +42,6 @@ jobs:
       - run: npm install
       - run: npm run dist:win
       - run: npm run dist:portable
-        env:
-          VITE_SUPABASE_URL: https://ntymdsrpmsxmrvwvuiad.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_H-lHD1fZ_rMt798i_RmoRQ_Lzd1b3iW
       - uses: actions/upload-artifact@v4
         with:
           name: MIXO-GAME-Windows
