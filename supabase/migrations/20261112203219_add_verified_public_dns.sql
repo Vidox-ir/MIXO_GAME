@@ -1,0 +1,23 @@
+-- Additional resolvers verified against provider documentation on 2026-11-12.
+insert into public.dns_servers
+(slug,name,category,primary_ipv4,secondary_ipv4,primary_ipv6,secondary_ipv6,doh_url,website,notes,source_url,enabled)
+values
+('dns4eu-protective','DNS4EU — محافظت‌شده','اروپا','86.54.11.1','86.54.11.201','2a13:1001::86:54:11:1','2a13:1001::86:54:11:201','https://protective.joindns4.eu/dns-query','https://joindns4.eu/for-public','محافظت در برابر بدافزار، فیشینگ و دامنه‌های فرماندهی و کنترل.','https://joindns4.eu/for-public',true),
+('dns4eu-child','DNS4EU — محافظت خانواده','خانواده','86.54.11.12','86.54.11.212','2a13:1001::86:54:11:12','2a13:1001::86:54:11:212','https://child.joindns4.eu/dns-query','https://joindns4.eu/for-public','حالت محافظتی به‌همراه فیلتر محتوای نامناسب برای کودکان.','https://joindns4.eu/for-public',true),
+('dns4eu-noads','DNS4EU — ضد تبلیغ','تبلیغات','86.54.11.13','86.54.11.213','2a13:1001::86:54:11:13','2a13:1001::86:54:11:213','https://noads.joindns4.eu/dns-query','https://joindns4.eu/for-public','حالت محافظتی به‌همراه مسدودسازی تبلیغات و ردیاب‌ها.','https://joindns4.eu/for-public',true),
+('dns4eu-child-noads','DNS4EU — خانواده و ضد تبلیغ','خانواده','86.54.11.11','86.54.11.211','2a13:1001::86:54:11:11','2a13:1001::86:54:11:211','https://child-noads.joindns4.eu/dns-query','https://joindns4.eu/for-public','حالت محافظتی، فیلتر محتوای خانواده و تبلیغات.','https://joindns4.eu/for-public',true),
+('dns4eu-unfiltered','DNS4EU — بدون فیلتر محتوا','اروپا','86.54.11.100','86.54.11.200','2a13:1001::86:54:11:100','2a13:1001::86:54:11:200','https://unfiltered.joindns4.eu/dns-query','https://joindns4.eu/for-public','نسخه بدون فیلتر محتوایی DNS4EU؛ محدودیت‌های قانونی منطقه‌ای همچنان اعمال می‌شود.','https://joindns4.eu/for-public',true),
+('cira-private','CIRA Canadian Shield — خصوصی','جهانی','149.112.121.10','149.112.122.10','2620:10A:80BB::10','2620:10A:80BC::10','https://private.canadianshield.cira.ca/dns-query','https://www.cira.ca/en/canadian-shield/','Resolve عادی با DNS رمزگذاری‌شده؛ نسخه Private فاقد فیلتر محتوایی است.','https://www.cira.ca/en/canadian-shield/configure/summary-cira-canadian-shield-dns-resolver-addresses/',true),
+('cira-protected','CIRA Canadian Shield — محافظت‌شده','امنیت','149.112.121.20','149.112.122.20','2620:10A:80BB::20','2620:10A:80BC::20','https://protected.canadianshield.cira.ca/dns-query','https://www.cira.ca/en/canadian-shield/','نسخه محافظتی برای دامنه‌های مخرب و فیشینگ.','https://www.cira.ca/en/canadian-shield/configure/summary-cira-canadian-shield-dns-resolver-addresses/',true),
+('cira-family','CIRA Canadian Shield — خانواده','خانواده','149.112.121.30','149.112.122.30','2620:10A:80BB::30','2620:10A:80BC::30','https://family.canadianshield.cira.ca/dns-query','https://www.cira.ca/en/canadian-shield/','نسخه محافظتی به‌همراه فیلتر محتوای بزرگسالان.','https://www.cira.ca/en/canadian-shield/configure/summary-cira-canadian-shield-dns-resolver-addresses/',true),
+('dns-sb','DNS.SB — عمومی','جهانی','185.222.222.222','45.11.45.11','2a09::','2a11::','https://doh.dns.sb/dns-query','https://dns.sb/servers/','Resolver عمومی با پشتیبانی DNSSEC؛ دو مسیر IPv4 و IPv6.','https://dns.sb/servers/',true),
+('uncensored-anycast','UncensoredDNS — Anycast','جهانی','91.239.100.100',null,'2001:67c:28a4::',null,'https://anycast.uncensoreddns.org/dns-query','https://blog.uncensoreddns.org/dns-servers/','نقطه Anycast با DoH و DoT؛ مسیر پاسخ به نزدیک‌ترین نقطه شبکه وابسته است.','https://blog.uncensoreddns.org/dns-servers/',true),
+('uncensored-unicast','UncensoredDNS — Copenhagen','جهانی','89.233.43.71',null,'2a01:3a0:53:53::',null,'https://unicast.uncensoreddns.org/dns-query','https://blog.uncensoreddns.org/dns-servers/','نقطه Unicast در کپنهاگ با پشتیبانی DoH و DoT.','https://blog.uncensoreddns.org/dns-servers/',true),
+('libredns','LibreDNS — عمومی','جهانی','88.198.92.222',null,null,null,'https://doh.libredns.gr/dns-query','https://noads.libredns.gr/','Resolver عمومی رمزگذاری‌شده با DNS-over-HTTPS.','https://noads.libredns.gr/',true),
+('libredns-noads','LibreDNS — ضد تبلیغ','تبلیغات','88.198.92.222',null,null,null,'https://doh.libredns.gr/noads','https://noads.libredns.gr/','Endpoint جداگانه برای مسدودسازی تبلیغات و ردیاب‌ها.','https://noads.libredns.gr/',true)
+on conflict (slug) do update set
+  name=excluded.name, category=excluded.category,
+  primary_ipv4=excluded.primary_ipv4, secondary_ipv4=excluded.secondary_ipv4,
+  primary_ipv6=excluded.primary_ipv6, secondary_ipv6=excluded.secondary_ipv6,
+  doh_url=excluded.doh_url, website=excluded.website, notes=excluded.notes,
+  source_url=excluded.source_url, enabled=excluded.enabled;
