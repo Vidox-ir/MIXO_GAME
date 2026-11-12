@@ -1,6 +1,7 @@
 -- Keep game progression server-authoritative. Direct client writes would allow
 -- authenticated users to grant themselves XP, credits, score, or completion.
 drop policy if exists ghost_progress_own_all on public.ghost_progress;
+drop policy if exists ghost_progress_read_own on public.ghost_progress;
 
 create policy ghost_progress_read_own
 on public.ghost_progress
